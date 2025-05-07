@@ -37,47 +37,51 @@ export default function AccelerationChart({ data, loading }) {
   const [dataError, setDataError] = useState(false);
 
   useEffect(() => {
-    console.log('[Acceleration] New raw data:', data);
+    if (!Array.isArray(data) || data.length === 0) return;
 
     try {
-      if (Array.isArray(data) && data.length > 0) {
-        const latestEntry = data[data.length - 1];
-        
-        const validData = {
-          timestamp: latestEntry.timestamp || Date.now(),
-          x: parseFloat(latestEntry.x) || 0,
-          y: parseFloat(latestEntry.y) || 0,
-          z: parseFloat(latestEntry.z) || 0,
-        };
+      const latestEntry = data[data.length - 1];
 
-        const date = new Date(validData.timestamp);
-        const timeStr = date.toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-          hour12: false,
-        });
+      const validData = {
+        timestamp: latestEntry.timestamp || Date.now(),
+        x: parseFloat(latestEntry.x) || 0,
+        y: parseFloat(latestEntry.y) || 0,
+        z: parseFloat(latestEntry.z) || 0,
+      };
 
-        setHistory(prev => {
-          const newHistory = [...prev, {
-            time: timeStr,
-            x: validData.x,
-            y: validData.y,
-            z: validData.z,
-          }].slice(-20);
-          console.log('[Acceleration] Updated history:', newHistory);
-          return newHistory;
-        });
-        
-        setDataError(false);
-      }
+      const timeStr = new Date(validData.timestamp).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      });
+
+      const newPoint = {
+        time: timeStr,
+        x: validData.x,
+        y: validData.y,
+        z: validData.z,
+      };
+
+      setHistory((prev) => {
+        const last = prev[prev.length - 1];
+        if (
+          !last ||
+          last.x !== newPoint.x ||
+          last.y !== newPoint.y ||
+          last.z !== newPoint.z
+        ) {
+          return [...prev.slice(-19), newPoint];
+        }
+        return prev;
+      });
+
+      setDataError(false);
     } catch (error) {
-      console.error('[Acceleration] Data processing error:', error);
+      console.error('[AccelerationChart] Data processing error:', error);
       setDataError(true);
     }
   }, [data]);
-
-  // Remove development mock data if not needed
 
   if (loading) {
     return (

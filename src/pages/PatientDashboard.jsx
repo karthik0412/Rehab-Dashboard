@@ -7,18 +7,6 @@ import Footer from "@/components/Footer";
 export default function PatientDashboard() {
   const [patientId, setPatientId] = useState("38291");
   const [latestReport, setLatestReport] = useState(null);
-  const [messages, setMessages] = useState([
-    {
-      from: "Dr. Roberts",
-      text: "Great job this week! Focus on pinky flexion next session.",
-      date: "2025-05-01 10:23",
-    },
-    {
-      from: "Dr. Roberts",
-      text: "Don't forget to apply ice after your exercises.",
-      date: "2025-04-26 17:45",
-    },
-  ]);
 
   useEffect(() => {
     const reportRef = ref(db, `Reports/${patientId}`);
@@ -42,30 +30,39 @@ export default function PatientDashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
             <div className="bg-white rounded shadow p-4">
               <h2 className="text-sm text-gray-500">Flexion Progress</h2>
-              <p className="text-2xl font-semibold text-blue-600">{latestReport ? `${((latestReport.totalFlexion / 10500) * 100).toFixed(1)}%` : "--"}</p>
+              <p className="text-2xl font-semibold text-blue-600">
+                {latestReport ? `${((latestReport.totalFlexion / 10500) * 100).toFixed(1)}%` : "--"}
+              </p>
               <p className="text-xs text-gray-400">Based on last report</p>
             </div>
             <div className="bg-white rounded shadow p-4">
               <h2 className="text-sm text-gray-500">Stress Level</h2>
-              <p className="text-lg font-semibold text-amber-600">{latestReport ? (latestReport.acceleration > 1.5 ? "High" : "Moderate") : "--"}</p>
+              <p className="text-lg font-semibold text-amber-600">
+                {latestReport ? (latestReport.acceleration > 1.5 ? "High" : "Moderate") : "--"}
+              </p>
               <p className="text-xs text-gray-400">Sensor based reading</p>
             </div>
             <div className="bg-white rounded shadow p-4">
               <h2 className="text-sm text-gray-500">Current Condition</h2>
-              <p className="text-sm text-gray-700">{latestReport?.notes || "Awaiting doctor input."}</p>
+              <p className="text-sm text-gray-700">
+                {latestReport?.condition || "Awaiting doctor input."}
+              </p>
             </div>
           </div>
 
           <div className="bg-white rounded shadow p-4 mb-6">
             <h2 className="text-lg font-semibold mb-2">Doctor Messages</h2>
             <ul className="space-y-2">
-              {messages.map((msg, i) => (
-                <li key={i} className="border-b pb-2">
-                  <p className="text-sm font-medium text-blue-700">{msg.from}</p>
-                  <p className="text-sm text-gray-700">{msg.text}</p>
-                  <p className="text-xs text-gray-400">{msg.date}</p>
+              {latestReport?.doctorMessage ? (
+                <li className="border-b pb-2">
+                  <p className="text-sm font-medium text-blue-700">{latestReport.doctorMessage.from}</p>
+                  <p className="text-sm text-gray-700">{latestReport.doctorMessage.greeting}</p>
+                  <p className="text-sm text-gray-700">{latestReport.doctorMessage.text}</p>
+                  <p className="text-xs text-gray-400">{latestReport.doctorMessage.date}</p>
                 </li>
-              ))}
+              ) : (
+                <li className="text-sm text-gray-500">No recent doctor message available.</li>
+              )}
             </ul>
           </div>
         </div>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import { auth } from "../lib/firebase";
+import { useAuth } from "@/context/AuthContext";
 
 const DOCTOR_UID = "Uha9ea5xOMRHbivGDC9pEQXW5e93";
 const PATIENT_UID = "u3YTkCDKbKZn276SokdhHM8Fwso1";
@@ -12,6 +13,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const { setRole: setContextRole } = useAuth();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -23,10 +25,12 @@ export default function Login() {
 
       if (role === "doctor" && uid === DOCTOR_UID) {
         localStorage.setItem("userRole", "doctor");
-        navigate("/dashboard");
+        setContextRole("doctor");
+        navigate("/dashboard", { replace: true });
       } else if (role === "patient" && uid === PATIENT_UID) {
         localStorage.setItem("userRole", "patient");
-        navigate("/patient");
+        setContextRole("patient");
+        navigate("/patient", { replace: true });
       } else {
         setError("Unauthorized: This user does not match the selected role.");
       }
