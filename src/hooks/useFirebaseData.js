@@ -1,3 +1,4 @@
+// hooks/useFirebaseData.js
 import { useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
 import { ref, onValue, off } from 'firebase/database';
@@ -8,15 +9,15 @@ export const useFirebaseData = () => {
     force: null,
     mpu: null,
     loading: true,
-    error: null
+    error: null,
   });
 
   useEffect(() => {
     const listeners = [];
-    
+
     try {
-      // Flexion Data
-      const flexionRef = ref(db, "SensorData/FlexSensor");
+      // Flexion Listener
+      const flexionRef = ref(db, 'SensorData/FlexSensor');
       const flexionListener = onValue(flexionRef, (snapshot) => {
         const rawData = snapshot.val() || {};
         const formattedFlexion = {
@@ -24,57 +25,48 @@ export const useFirebaseData = () => {
           index: Number(rawData.Flex2?.RawValue) || 0,
           middle: Number(rawData.Flex3?.RawValue) || 0,
           ring: Number(rawData.Flex4?.RawValue) || 0,
-          pinky: Number(rawData.Flex5?.RawValue) || 0
+          pinky: Number(rawData.Flex5?.RawValue) || 0,
         };
-        
-        setData(prev => ({
-          ...prev,
-          flexion: formattedFlexion,
-          loading: false
-        }));
+        console.log('[Firebase] Flexion:', formattedFlexion);
+        setData((prev) => ({ ...prev, flexion: formattedFlexion, loading: false }));
       });
-      listeners.push(flexionListener);
+      listeners.push({ ref: flexionRef, listener: flexionListener });
 
-      // Force Sensor
-      const forceRef = ref(db, "SensorData/ForceSensor");
+      // Force Sensor Listener
+      const forceRef = ref(db, 'SensorData/ForceSensor');
       const forceListener = onValue(forceRef, (snapshot) => {
-        const rawData = snapshot.val() || {};
-        setData(prev => ({
-          ...prev,
-          force: Number(rawData.RawValue) || 0,
-          loading: false
-        }));
+        const raw = snapshot.val() || {};
+        const value = Number(raw.RawValue) || 0;
+        console.log('[Firebase] Force:', value);
+        setData((prev) => ({ ...prev, force: value, loading: false }));
       });
-      listeners.push(forceListener);
+      listeners.push({ ref: forceRef, listener: forceListener });
 
-      // MPU Sensor
-      const mpuRef = ref(db, "SensorData/MPU6058");
+      // MPU Listener
+      const mpuRef = ref(db, 'SensorData/MPU6058');
       const mpuListener = onValue(mpuRef, (snapshot) => {
-        const rawData = snapshot.val() || {};
-        setData(prev => ({
-          ...prev,
-          mpu: {
-            accelX: Number(rawData.accelX) || 0,
-            accelY: Number(rawData.accelY) || 0,
-            accelZ: Number(rawData.accelZ) || 0,
-            gyroX: Number(rawData.gyroX) || 0,
-            gyroY: Number(rawData.gyroY) || 0,
-            gyroZ: Number(rawData.gyroZ) || 0
-          },
-          loading: false
-        }));
+        const raw = snapshot.val() || {};
+        const parsed = {
+          accelX: Number(raw.accelX) || 0,
+          accelY: Number(raw.accelY) || 0,
+          accelZ: Number(raw.accelZ) || 0,
+          gyroX: Number(raw.gyroX) || 0,
+          gyroY: Number(raw.gyroY) || 0,
+          gyroZ: Number(raw.gyroZ) || 0,
+        };
+        console.log('[Firebase] MPU:', parsed);
+        setData((prev) => ({ ...prev, mpu: parsed, loading: false }));
       });
-      listeners.push(mpuListener);
+      listeners.push({ ref: mpuRef, listener: mpuListener });
 
     } catch (error) {
-      setData(prev => ({
-        ...prev,
-        loading: false,
-        error: error.message || 'Failed to connect to database'
-      }));
+      console.error('[Firebase Error]', error);
+      setData((prev) => ({ ...prev, loading: false, error: error.message || 'Failed to connect' }));
     }
 
-    return () => listeners.forEach(ref => off(ref));
+    return () => {
+      listeners.forEach(({ ref, listener }) => off(ref, 'value', listener));
+    };
   }, []);
 
   return data;

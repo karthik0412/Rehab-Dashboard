@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+// AccelerationChart.jsx
+import { useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import {
   LineChart,
@@ -32,56 +33,27 @@ const CustomTooltip = ({ active, payload }) => {
   return null;
 };
 
-export default function AccelerationChart({ data, loading }) {
-  const [history, setHistory] = useState([]);
-  const [dataError, setDataError] = useState(false);
-
-  useEffect(() => {
-    if (!Array.isArray(data) || data.length === 0) return;
-
-    try {
-      const latestEntry = data[data.length - 1];
-
-      const validData = {
-        timestamp: latestEntry.timestamp || Date.now(),
-        x: parseFloat(latestEntry.x) || 0,
-        y: parseFloat(latestEntry.y) || 0,
-        z: parseFloat(latestEntry.z) || 0,
-      };
-
-      const timeStr = new Date(validData.timestamp).toLocaleTimeString("en-US", {
+export default function AccelerationChart({ data = [], loading }) {
+  const chartData = useMemo(() => {
+    if (!Array.isArray(data)) return [];
+    return data.map((entry) => ({
+      ...entry,
+      time: new Date(entry.timestamp).toLocaleTimeString("en-US", {
         hour: "2-digit",
         minute: "2-digit",
         second: "2-digit",
         hour12: false,
-      });
-
-      const newPoint = {
-        time: timeStr,
-        x: validData.x,
-        y: validData.y,
-        z: validData.z,
-      };
-
-      setHistory((prev) => {
-        const last = prev[prev.length - 1];
-        if (
-          !last ||
-          last.x !== newPoint.x ||
-          last.y !== newPoint.y ||
-          last.z !== newPoint.z
-        ) {
-          return [...prev.slice(-19), newPoint];
-        }
-        return prev;
-      });
-
-      setDataError(false);
-    } catch (error) {
-      console.error('[AccelerationChart] Data processing error:', error);
-      setDataError(true);
-    }
+      }),
+    }));
   }, [data]);
+
+  const yAxisDomain = useMemo(() => {
+    if (chartData.length === 0) return ['auto', 'auto'];
+    const values = chartData.flatMap(({ x, y, z }) => [x, y, z]);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    return [Math.floor(min) - 1, Math.ceil(max) + 1];
+  }, [chartData]);
 
   if (loading) {
     return (
@@ -91,77 +63,21 @@ export default function AccelerationChart({ data, loading }) {
     );
   }
 
-  if (dataError) {
-    return (
-      <Card className="bg-white rounded-lg shadow-card p-4 pb-2 mb-6">
-        <div className="h-[300px] flex items-center justify-center text-red-500">
-          <p>Error processing acceleration data</p>
-        </div>
-      </Card>
-    );
-  }
-
   return (
     <Card className="bg-white rounded-lg shadow-card p-4 pb-2 mb-6">
       <div className="flex justify-between items-center mb-4">
         <h3 className="font-semibold text-neutral-900">Real-time Acceleration Data</h3>
-        <span className="text-xs text-neutral-500">
-          {history.length} readings
-        </span>
+        <span className="text-xs text-neutral-500">{chartData.length} readings</span>
       </div>
-
       <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={history}>
+        <LineChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-          <XAxis 
-            dataKey="time"
-            tick={{ fontSize: 10 }}
-            label={{
-              value: "Time",
-              offset: -5,
-              position: "insideBottom",
-              fontSize: 12,
-            }}
-          />
-          <YAxis
-            domain={['auto', 'auto']}
-            tick={{ fontSize: 10 }}
-            label={{
-              value: "Acceleration (m/s²)",
-              angle: -90,
-              position: "insideLeft",
-              style: { textAnchor: "middle" },
-              fontSize: 12,
-            }}
-          />
+          <XAxis dataKey="time" tick={{ fontSize: 10 }} label={{ value: "Time", offset: -5, position: "insideBottom", fontSize: 12 }} />
+          <YAxis domain={yAxisDomain} tick={{ fontSize: 10 }} label={{ value: "Acceleration (m/s²)", angle: -90, position: "insideLeft", fontSize: 12, style: { textAnchor: "middle" } }} />
           <Tooltip content={<CustomTooltip />} />
-          <Line
-            type="monotone"
-            dataKey="x"
-            stroke="#8884d8"
-            name="X-axis"
-            dot={false}
-            isAnimationActive={false}
-            strokeWidth={1.5}
-          />
-          <Line
-            type="monotone"
-            dataKey="y"
-            stroke="#82ca9d"
-            name="Y-axis"
-            dot={false}
-            isAnimationActive={false}
-            strokeWidth={1.5}
-          />
-          <Line
-            type="monotone"
-            dataKey="z"
-            stroke="#ffc658"
-            name="Z-axis"
-            dot={false}
-            isAnimationActive={false}
-            strokeWidth={1.5}
-          />
+          <Line type="monotone" dataKey="x" stroke="#8884d8" name="X-axis" dot={false} isAnimationActive={false} strokeWidth={1.5} />
+          <Line type="monotone" dataKey="y" stroke="#82ca9d" name="Y-axis" dot={false} isAnimationActive={false} strokeWidth={1.5} />
+          <Line type="monotone" dataKey="z" stroke="#ffc658" name="Z-axis" dot={false} isAnimationActive={false} strokeWidth={1.5} />
         </LineChart>
       </ResponsiveContainer>
     </Card>

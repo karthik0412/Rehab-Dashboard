@@ -6,21 +6,20 @@ const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [role, setRole] = useState(null);
+  const [role, setRole] = useState(localStorage.getItem("userRole") || null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      const storedRole = localStorage.getItem("userRole");
-      setRole(storedRole);
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
       setLoading(false);
     });
+
     return () => unsubscribe();
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, role, loading, setRole }}>
+    <AuthContext.Provider value={{ user, role, setRole, loading }}>
       {children}
     </AuthContext.Provider>
   );

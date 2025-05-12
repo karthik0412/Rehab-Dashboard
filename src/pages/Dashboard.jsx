@@ -1,4 +1,4 @@
-//doctor dashboard
+// Updated Dashboard.jsx
 import { useEffect, useState } from "react";
 import { useFirebaseData } from "@/hooks/useFirebaseData";
 import {
@@ -13,91 +13,78 @@ import {
   RecentReports,
 } from "@/components";
 import ForceChart from "@/components/ForceChart";
-import LoadingOverlay from "@/components/LoadingOverlay";
 import { db } from "@/lib/firebase";
 import { ref, push } from "firebase/database";
 
 const Dashboard = () => {
-  const { flexion, force, mpu, loading, error } = useFirebaseData();
+  const { flexion, force, mpu, loading } = useFirebaseData();
 
   const [selectedPatient, setSelectedPatient] = useState("38291");
   const [showForm, setShowForm] = useState(false);
   const [notes, setNotes] = useState("");
 
-  const safeFlexion = flexion || {
-    thumb: 0,
-    index: 0,
-    middle: 0,
-    ring: 0,
-    pinky: 0,
-  };
-
+  const safeFlexion = flexion || { thumb: 0, index: 0, middle: 0, ring: 0, pinky: 0 };
   const safeForce = typeof force === "number" ? force : 0;
   const safeMpu = mpu || {
-    accelX: 0,
-    accelY: 0,
-    accelZ: 0,
-    gyroX: 0,
-    gyroY: 0,
-    gyroZ: 0,
+    accelX: 0, accelY: 0, accelZ: 0,
+    gyroX: 0, gyroY: 0, gyroZ: 0
   };
 
-  const totalFlexion = Object.values(safeFlexion).reduce(
-    (sum, val) => sum + Number(val || 0),
-    0
-  );
-
-  const acceleration = Math.hypot(
-    Number(safeMpu.accelX || 0),
-    Number(safeMpu.accelY || 0),
-    Number(safeMpu.accelZ || 0)
-  );
+  const totalFlexion = Object.values(safeFlexion).reduce((sum, val) => sum + Number(val || 0), 0);
+  const acceleration = Math.hypot(safeMpu.accelX, safeMpu.accelY, safeMpu.accelZ);
 
   const [forceHistory, setForceHistory] = useState([]);
   const [accelHistory, setAccelHistory] = useState([]);
-  const timestamp = Date.now();
+  const [gyroHistory, setGyroHistory] = useState([]);
 
   useEffect(() => {
-    if (!loading && typeof safeForce === "number") {
-      setForceHistory((prev) => [
-        ...prev.slice(-49),
-        { force: safeForce, timestamp },
-      ]);
+    if (!loading) {
+      const ts = Date.now();
+      console.log("[safeMpu]", safeMpu);
+
+      const accel = {
+        x: safeMpu.accelX,
+        y: safeMpu.accelY,
+        z: safeMpu.accelZ,
+        timestamp: ts,
+      };
+
+      const gyro = {
+        x: safeMpu.gyroX,
+        y: safeMpu.gyroY,
+        z: safeMpu.gyroZ,
+        timestamp: ts,
+      };
+
+      console.log("[Adding accel point]", accel);
+      console.log("[Adding gyro point]", gyro);
+
+      setAccelHistory((prev) => [...prev.slice(-49), accel]);
+      setGyroHistory((prev) => [...prev.slice(-49), gyro]);
     }
-  }, [safeForce, loading, timestamp]);
+  }, [safeMpu, loading]);
 
   useEffect(() => {
-    if (!loading && safeMpu) {
-      setAccelHistory((prev) => [
-        ...prev.slice(-49),
-        {
-          x: safeMpu.accelX,
-          y: safeMpu.accelY,
-          z: safeMpu.accelZ,
-          timestamp,
-        },
-      ]);
+    if (!loading) {
+      const point = { force: safeForce, timestamp: Date.now() };
+      console.log("[Adding force point]", point);
+      setForceHistory((prev) => [...prev.slice(-49), point]);
     }
-  }, [safeMpu, loading, timestamp]);
+  }, [safeForce, loading]);
 
   const dummySession = {
-    duration: "14:32",
-    dataPoints: 432,
-    signalQuality: "Good",
-    status: "Active",
+    duration: "14:32", dataPoints: 432, signalQuality: "Good", status: "Active"
   };
 
-  const dummyRanges = {
-    thumb: { value: Math.min(safeFlexion.thumb, 338), category: "Mid" },
-    index: { value: Math.min(safeFlexion.index, 338), category: "Mid" },
-    middle: { value: Math.min(safeFlexion.middle, 338), category: "Mid" },
-    ring: { value: Math.min(safeFlexion.ring, 338), category: "Mid" },
-    pinky: { value: Math.min(safeFlexion.pinky, 338), category: "Mid" },
-  };
+  const dummyRanges = Object.fromEntries(
+    Object.entries(safeFlexion).map(([finger, value]) => [
+      finger, { value: Math.min(value, 338), category: "Mid" }
+    ])
+  );
 
   const dummyReports = [
     { id: 1, name: "Session Report - 01 May", createdAt: new Date(), status: "Completed" },
-    { id: 2, name: "Grip Strength Review", createdAt: new Date(), status: "In Progress" },
+    { id: 2, name: "Grip Strength Review", createdAt: new Date(), status: "In Progress" }
   ];
 
   const handleReportSubmit = async () => {
@@ -130,9 +117,9 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-
       <main className="flex-1 p-6 bg-gray-50">
         <div className="max-w-7xl mx-auto">
+
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-3xl font-bold text-gray-900">Hand Mobility Dashboard</h1>
             <div className="flex items-center space-x-3">
@@ -180,73 +167,15 @@ const Dashboard = () => {
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <MetricCard
-              title="AROM"
-              value={totalFlexion}
-              unit="°"
-              icon="track_changes"
-              iconBgColor="bg-indigo-100"
-              iconColor="text-indigo-600"
-            />
-            <MetricCard
-              title="GRASP"
-              value={safeForce}
-              unit="N"
-              icon="pan_tool"
-              iconBgColor="bg-orange-100"
-              iconColor="text-orange-600"
-            />
-            <MetricCard
-              title="FINE MOTOR"
-              value={acceleration}
-              unit="g"
-              icon="psychology"
-              iconBgColor="bg-green-100"
-              iconColor="text-green-600"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <MetricCard
-              title="Total Flexion"
-              value={totalFlexion.toFixed(1)}
-              unit="°"
-              icon="accessibility"
-              iconBgColor="bg-purple-100"
-              iconColor="text-purple-600"
-            />
-            <MetricCard
-              title="Force Sensor"
-              value={safeForce.toFixed(2)}
-              unit="N"
-              icon="fitness_center"
-              iconBgColor="bg-orange-100"
-              iconColor="text-orange-600"
-            />
-            <MetricCard
-              title="Acceleration"
-              value={acceleration.toFixed(2)}
-              unit="g"
-              icon="speed"
-              iconBgColor="bg-blue-100"
-              iconColor="text-blue-600"
-            />
+            <MetricCard title="AROM" value={totalFlexion} unit="°" icon="track_changes" iconBgColor="bg-indigo-100" iconColor="text-indigo-600" />
+            <MetricCard title="GRASP" value={safeForce} unit="N" icon="pan_tool" iconBgColor="bg-orange-100" iconColor="text-orange-600" />
+            <MetricCard title="FINE MOTOR" value={acceleration} unit="g" icon="psychology" iconBgColor="bg-green-100" iconColor="text-green-600" />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             <FlexionChart data={safeFlexion} loading={loading} />
             <AccelerationChart data={accelHistory} loading={loading} />
-            <GyroscopeData
-              data={[
-                {
-                  x: safeMpu.gyroX,
-                  y: safeMpu.gyroY,
-                  z: safeMpu.gyroZ,
-                  timestamp,
-                },
-              ]}
-              loading={loading}
-            />
+            <GyroscopeData data={gyroHistory} loading={loading} />
             <ForceChart data={forceHistory} loading={loading} />
           </div>
 
@@ -258,7 +187,6 @@ const Dashboard = () => {
           <RecentReports reports={dummyReports} loading={loading} />
         </div>
       </main>
-
       <Footer />
     </div>
   );
